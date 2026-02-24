@@ -19,7 +19,10 @@ model User {
   password      String
   phone         String?
   role          UserRole     @default(CUSTOMER)
-  emailVerified Boolean  @default(false)
+  
+  isVerified                 Boolean  @default(false)
+  emailVerificationTokenHash String?
+  emailVerificationExpiresAt DateTime?
 
   businesses    Business[]
   orders        Order[]
@@ -37,6 +40,10 @@ model Business {
   coverImageUrl String?
   city          String
   address       String?
+
+  slug          String   @unique
+  publicUrl     String
+  qrCode        String?
 
   ownerId       String
   owner         User     @relation(fields: [ownerId], references: [id])
@@ -69,38 +76,43 @@ model Product {
 }
 
 model Order {
-  id          String      @id @default(uuid())
-  totalAmount Float
-  status      OrderStatus @default(PENDING)
+  id            String      @id @default(uuid())
+  businessId    String
+  business      Business    @relation(fields: [businessId], references: [id])
+  customerName  String
+  customerPhone String
+  status        OrderStatus @default(PENDING)
+  totalAmount   Float
+  
+  items         OrderItem[]
 
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Optional: Link to registered user if they are logged in, but requirement says public.
+  // Keeping it optional for flexibility if we want to track registered customers later.
   customerId  String?
   customer    User?       @relation(fields: [customerId], references: [id])
+}
 
-  businessId  String
-  business    Business    @relation(fields: [businessId], references: [id])
-
-  items       OrderItem[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id])
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  productName String
+  unitPrice   Float
+  quantity    Int
+  subtotal    Float
 }
 
 enum OrderStatus {
   PENDING
-  PAID
-  PROCESSING
+  CONFIRMED
   COMPLETED
   CANCELLED
 }
 
-model OrderItem {
-  id        String  @id @default(uuid())
-  quantity  Int
-  price     Float   // snapshot at time of order
 
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
 
-  orderId   String
-  order     Order   @relation(fields: [orderId], references: [id])
-}

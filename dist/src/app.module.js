@@ -14,6 +14,8 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const env_validation_1 = require("./config/env.validation");
 const configuration_1 = __importDefault(require("./config/configuration"));
+const app_controller_1 = require("./app.controller");
+const app_service_1 = require("./app.service");
 const prisma_module_1 = require("./prisma/prisma.module");
 const auth_module_1 = require("./auth/auth.module");
 const users_module_1 = require("./users/users.module");
@@ -21,19 +23,27 @@ const businesses_module_1 = require("./businesses/businesses.module");
 const products_module_1 = require("./products/products.module");
 const orders_module_1 = require("./orders/orders.module");
 const discovery_module_1 = require("./discovery/discovery.module");
-const payments_module_1 = require("./payments/payments.module");
+const mail_module_1 = require("./mail/mail.module");
+const throttler_1 = require("@nestjs/throttler");
+const core_1 = require("@nestjs/core");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            throttler_1.ThrottlerModule.forRoot([
+                {
+                    ttl: 60000,
+                    limit: process.env.NODE_ENV === 'test' ? 1000 : 100,
+                },
+            ]),
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
                 load: [configuration_1.default],
                 validationSchema: env_validation_1.validationSchema,
                 validationOptions: {
-                    abortEarly: false,
+                    abortEarly: true,
                 },
             }),
             prisma_module_1.PrismaModule,
@@ -41,9 +51,17 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             businesses_module_1.BusinessesModule,
             products_module_1.ProductsModule,
-            orders_module_1.OrdersModule,
             discovery_module_1.DiscoveryModule,
-            payments_module_1.PaymentsModule,
+            mail_module_1.MailModule,
+            orders_module_1.OrdersModule,
+        ],
+        controllers: [app_controller_1.AppController],
+        providers: [
+            app_service_1.AppService,
+            {
+                provide: core_1.APP_GUARD,
+                useClass: throttler_1.ThrottlerGuard,
+            },
         ],
     })
 ], AppModule);
