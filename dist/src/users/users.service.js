@@ -17,14 +17,33 @@ let UsersService = class UsersService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async create(data) {
+        return this.prisma.user.create({
+            data,
+        });
+    }
+    async findAll() {
+        return this.prisma.user.findMany();
+    }
+    async findOne(id) {
+        return this.prisma.user.findUnique({
+            where: { id },
+        });
+    }
     async findByEmail(email) {
         return this.prisma.user.findUnique({
             where: { email },
         });
     }
-    async create(data) {
-        return this.prisma.user.create({
-            data,
+    async update(id, updateUserDto) {
+        return this.prisma.user.update({
+            where: { id },
+            data: updateUserDto,
+        });
+    }
+    async remove(id) {
+        return this.prisma.user.delete({
+            where: { id },
         });
     }
 };

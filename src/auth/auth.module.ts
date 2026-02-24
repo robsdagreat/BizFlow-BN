@@ -7,23 +7,28 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+import { MailModule } from '../mail/mail.module';
+import { PrismaModule } from '../prisma/prisma.module';
+
 @Module({
-    imports: [
-        UsersModule,
-        PassportModule,
-        JwtModule.registerAsync({
-            imports: [ConfigModule],
-            inject: [ConfigService],
-            useFactory: async (configService: ConfigService) => ({
-                secret: configService.get('JWT_SECRET'),
-                signOptions: {
-                    expiresIn: configService.get('JWT_EXPIRES_IN') || '1d',
-                },
-            }),
-        }),
-    ],
-    providers: [AuthService, JwtStrategy],
-    controllers: [AuthController],
-    exports: [AuthService],
+  imports: [
+    UsersModule,
+    MailModule,
+    PrismaModule,
+    PassportModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get('JWT_SECRET'),
+        signOptions: {
+          expiresIn: configService.get('JWT_EXPIRES_IN') || '1d',
+        },
+      }),
+    }),
+  ],
+  providers: [AuthService, JwtStrategy],
+  controllers: [AuthController],
+  exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

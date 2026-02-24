@@ -1,16 +1,27 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { User } from '@prisma/client';
+import { User, Prisma } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { randomBytes, createHash } from 'crypto';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private mailService: MailService,
+    private prisma: PrismaService, // Needed for direct updates on User model for verification fields
   ) { }
 
   async register(dto: RegisterDto) {
@@ -28,7 +39,56 @@ export class AuthService {
       phone: dto.phone,
     });
 
-    return this.generateToken(user);
+    // Generate Verification Token
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationTokenHash: tokenHash,
+        emailVerificationExpiresAt: expiresAt,
+      },
+    });
+
+    await this.mailService.sendVerificationEmail(user.email, rawToken);
+
+    // Return user data (excluding sensitive fields)
+    const { password: _, emailVerificationTokenHash, emailVerificationExpiresAt, ...userData } = updatedUser;
+    return userData;
+  }
+
+  async verifyEmail(token: string) {
+    if (!token) {
+      throw new BadRequestException('Verification token is required');
+    }
+
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        emailVerificationTokenHash: tokenHash,
+        emailVerificationExpiresAt: {
+          gte: new Date(),
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isVerified: true,
+        emailVerificationTokenHash: null,
+        emailVerificationExpiresAt: null,
+      },
+    });
+
+    return { message: 'Email verified successfully. You can now login.' };
   }
 
   async login(dto: LoginDto) {
@@ -42,6 +102,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.isVerified) {
+      throw new ForbiddenException('Please verify your email before logging in');
+    }
+
     return this.generateToken(user);
   }
 
@@ -52,8 +116,11 @@ export class AuthService {
       email: user.email,
     };
 
+    const { password: _, emailVerificationTokenHash, emailVerificationExpiresAt, ...userData } = user;
+
     return {
       access_token: this.jwtService.sign(payload),
+      user: userData,
     };
   }
 }

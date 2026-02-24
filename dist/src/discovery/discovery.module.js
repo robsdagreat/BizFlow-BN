@@ -10,11 +10,13 @@ exports.DiscoveryModule = void 0;
 const common_1 = require("@nestjs/common");
 const discovery_service_1 = require("./discovery.service");
 const discovery_controller_1 = require("./discovery.controller");
+const prisma_module_1 = require("../prisma/prisma.module");
 let DiscoveryModule = class DiscoveryModule {
 };
 exports.DiscoveryModule = DiscoveryModule;
 exports.DiscoveryModule = DiscoveryModule = __decorate([
     (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule],
         providers: [discovery_service_1.DiscoveryService],
         controllers: [discovery_controller_1.DiscoveryController],
         exports: [discovery_service_1.DiscoveryService],

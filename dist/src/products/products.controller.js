@@ -8,17 +8,78 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductsController = void 0;
 const common_1 = require("@nestjs/common");
 const products_service_1 = require("./products.service");
+const create_product_dto_1 = require("./dto/create-product.dto");
+const update_product_dto_1 = require("./dto/update-product.dto");
+const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
+const roles_guard_1 = require("../common/guards/roles.guard");
+const roles_decorator_1 = require("../common/decorators/roles.decorator");
+const client_1 = require("@prisma/client");
 let ProductsController = class ProductsController {
     productsService;
     constructor(productsService) {
         this.productsService = productsService;
     }
+    create(req, createProductDto) {
+        return this.productsService.create(req.user.userId, createProductDto);
+    }
+    myProducts(req) {
+        return this.productsService.myProducts(req.user.userId);
+    }
+    update(req, id, updateProductDto) {
+        return this.productsService.update(req.user.userId, id, updateProductDto);
+    }
+    remove(req, id) {
+        return this.productsService.remove(req.user.userId, id);
+    }
 };
 exports.ProductsController = ProductsController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.SELLER),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, create_product_dto_1.CreateProductDto]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)('my-products'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.SELLER),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "myProducts", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.SELLER),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, update_product_dto_1.UpdateProductDto]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.SELLER),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], ProductsController.prototype, "remove", null);
 exports.ProductsController = ProductsController = __decorate([
     (0, common_1.Controller)('products'),
     __metadata("design:paramtypes", [products_service_1.ProductsService])
